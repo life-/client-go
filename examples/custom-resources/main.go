@@ -42,22 +42,25 @@ import (
 )
 
 func main() {
-	var cluster1, cluster2 *string
-	var kubeconfig1, kubeconfig2 *string
+	var cluster1/*, cluster2 */ *string
+	var kubeconfig1/*, kubeconfig2 */ *string
+    var cr *string
 
 	cluster1 = flag.String("cluster1", "", "raw cluster name ")
-	cluster2 = flag.String("cluster2", "" , "to be compared cluster")
+	// cluster2 = flag.String("cluster2", "" , "to be compared cluster")
+
+    cr = flag.String("cr", "", "cr type")
 	flag.Parse()
 
-	file1 := fmt.Sprintf("cluster.%s.yaml", *cluster1)
-	file2 := fmt.Sprintf("cluster.%s.yaml", *cluster2)
+	file1 := fmt.Sprintf("cluster.%s", *cluster1)
+	// file2 := fmt.Sprintf("cluster.%s.yaml", *cluster2)
 
 	if home := homedir.HomeDir(); home != "" {
 		kubeconfig1 = flag.String("kubeconfig1", filepath.Join(home, ".kube", file1), "(optional) absolute path to the kubeconfig file")
-		kubeconfig2 = flag.String("kubeconfig2", filepath.Join(home, ".kube", file2), "(optional) absolute path to the kubeconfig file")
+		// kubeconfig2 = flag.String("kubeconfig2", filepath.Join(home, ".kube", file2), "(optional) absolute path to the kubeconfig file")
 	} else {
 		kubeconfig1 = flag.String("kubeconfig1", "", "absolute path to the kubeconfig1 file")
-		kubeconfig2 = flag.String("kubeconfig2", "", "absolute path to the kubeconfig2 file")
+		// kubeconfig2 = flag.String("kubeconfig2", "", "absolute path to the kubeconfig2 file")
 	}
 
 
@@ -66,48 +69,51 @@ func main() {
 		panic(err)
 	}
 
-	config2, err := clientcmd.BuildConfigFromFlags("", *kubeconfig2)
-	if err != nil {
-		panic(err)
-	}
+	// config2, err := clientcmd.BuildConfigFromFlags("", *kubeconfig2)
+	// if err != nil {
+	// 	panic(err)
+	// }
+
 	client1, err := dynamic.NewForConfig(config1)
 	if err != nil {
 		panic(err)
 	}
 
-	client2, err := dynamic.NewForConfig(config2)
-	if err != nil {
-		panic(err)
-	}
+	// client2, err := dynamic.NewForConfig(config2)
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	//deploymentRes := schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
-	customResource := schema.GroupVersionResource{Group: "cloudmesh.alipay.com", Version: "v1", Resource: "ddsscopeconfigs"}
+	customResource := schema.GroupVersionResource{Group: "cloudmesh.alipay.com", Version: "v1", Resource: *cr}
 
 	list, err := client1.Resource(customResource).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		panic(err)
 	}
 
-	ch := make(chan string, 20)
+	// ch := make(chan string, 200)
 	for _, d := range list.Items {
 		//replicas, found, err := unstructured.NestedInt64(d.Object, "spec", "replicas")
 		//if err != nil || !found {
 		//	fmt.Printf("Replicas not found for deployment %s: error=%s", d.GetName(), err)
 		//	continue
 		//}
-		//fmt.Printf(" * %s (%d replicas)\n", d.GetName(), replicas)
-		go match(client2, d.GetNamespace(), d.GetName(), *cluster2, ch)
-		fmt.Println(<-ch)
+		fmt.Printf("%s/%s\n", d.GetNamespace(), d.GetName())
+		// go match(client2, d.GetNamespace(), d.GetName(), *cluster2, ch)
 	}
+
+    // for i := 0; i < len(list.Items); i++ {
+		// fmt.Println(<-ch)
+    // }
 }
 
-func match(client dynamic.Interface, namespace, name, cluster string, ch chan string)  {
+// func match(client dynamic.Interface, namespace, name, cluster string, ch chan string)  {
 
-	customResource := schema.GroupVersionResource{Group: "cloudmesh.alipay.com", Version: "v1", Resource: "ddsscopeconfigs"}
-	_, err := client.Resource(customResource).Namespace(namespace).Get(context.TODO(), name, metav1.GetOptions{})
-	if err != nil {
-		ch <- fmt.Sprintf("%v/%v not found in %v", namespace, name, cluster)
-	} else {
-		ch <- fmt.Sprintf("%v/%v found", namespace, name)
-	}
-}
+// 	customResource := schema.GroupVersionResource{Group: "cloudmesh.alipay.com", Version: "v1", Resource: *cr}
+// 	_, err := client.Resource(customResource).Namespace(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+// 	if err != nil {
+// 		ch <- fmt.Sprintf("%v/%v not found in %v", namespace, name, cluster)
+// 	} else {
+// 		ch <- fmt.Sprintf("%v/%v found", namespace, name)
+// 	}
+// }
